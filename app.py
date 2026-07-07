@@ -33,8 +33,57 @@ UNIVERSES = {
             "Nifty 100": "^CNX100",
             "Nifty 200": "^CNX200",
             "Nifty 500": "NIFTY_500.NS",
-            "Nifty Smallcap 250": "NIFTY_SMLCAP_250.NS"
+            "Nifty Smallcap 250": "NMLCAP_250.NS"
         }
+    }
+}
+
+# CONSTITUENT STOCK MAP (Categorized by Sector and Market Cap)
+STOCK_MAP = {
+    "Nifty Bank": {
+        "Large-Cap": ["HDFCBANK.NS", "ICICIBANK.NS", "SBIN.NS", "AXISBANK.NS"],
+        "Mid-Cap": ["FEDERALBNK.NS", "IDFCFIRSTB.NS", "AUBANK.NS"],
+        "Small-Cap": ["CUB.NS", "KARURVYSYA.NS", "UCOBANK.NS"]
+    },
+    "Nifty IT": {
+        "Large-Cap": ["TCS.NS", "INFY.NS", "HCLTECH.NS", "WIPRO.NS"],
+        "Mid-Cap": ["LTIM.NS", "PERSISTENT.NS", "COFORGE.NS"],
+        "Small-Cap": ["KPITTECH.NS", "CYIENT.NS", "ZENSARTECH.NS"]
+    },
+    "Nifty FMCG": {
+        "Large-Cap": ["HINDUNILVR.NS", "ITC.NS", "NESTLEIND.NS", "BRITANNIA.NS"],
+        "Mid-Cap": ["GODREJCP.NS", "MARICO.NS", "DABUR.NS"],
+        "Small-Cap": ["BALRAMCHIN.NS", "AWL.NS", "VBL.NS"]
+    },
+    "Nifty Pharma": {
+        "Large-Cap": ["SUNPHARMA.NS", "CIPLA.NS", "DRREDDY.NS", "DIVISLAB.NS"],
+        "Mid-Cap": ["LUPIN.NS", "AUROPHARMA.NS", "TORNTPHARM.NS"],
+        "Small-Cap": ["BIOCON.NS", "GLENMARK.NS", "GRANULES.NS"]
+    },
+    "Nifty Auto": {
+        "Large-Cap": ["MARUTI.NS", "TATAMOTORS.NS", "M&M.NS", "BAJAJ-AUTO.NS"],
+        "Mid-Cap": ["TVSMOTOR.NS", "TIINDIA.NS", "BHARATFORG.NS"],
+        "Small-Cap": ["EXIDEIND.NS", "AMARAJABAT.NS", "BALKRISHIND.NS"]
+    },
+    "Nifty Metal": {
+        "Large-Cap": ["TATASTEEL.NS", "JSWSTEEL.NS", "HINDALCO.NS"],
+        "Mid-Cap": ["JINDALSTEL.NS", "SAIL.NS", "NMDC.NS"],
+        "Small-Cap": ["NATIONALUM.NS", "WELCORP.NS", "APLAPOLLO.NS"]
+    },
+    "Nifty Infra": {
+        "Large-Cap": ["LT.NS", "RELIANCE.NS", "BHARTIARTL.NS", "NTPC.NS"],
+        "Mid-Cap": ["GMRINFRA.NS", "IRB.NS", "CONCOR.NS"],
+        "Small-Cap": ["NCC.NS", "HFCL.NS", "ENGINERSIN.NS"]
+    },
+    "Nifty Realty": {
+        "Large-Cap": ["DLF.NS", "LODHA.NS", "GODREJPROP.NS"],
+        "Mid-Cap": ["OBEROIRLTY.NS", "PRESTIGE.NS", "PHOENIXLTD.NS"],
+        "Small-Cap": ["SOBHA.NS", "BRIGADE.NS", "SUNTECK.NS"]
+    },
+    "Nifty Energy": {
+        "Large-Cap": ["RELIANCE.NS", "NTPC.NS", "POWERGRID.NS", "ONGC.NS"],
+        "Mid-Cap": ["BPCL.NS", "IOC.NS", "GAIL.NS", "TATAPOWER.NS"],
+        "Small-Cap": ["SJVN.NS", "IREDA.NS", "NHPC.NS"]
     }
 }
 
@@ -63,7 +112,6 @@ def load_and_calculate_rrg(config):
     for name, ticker in sectors_dict.items():
         if ticker not in close_data.columns:
             continue
-        # Core RRG Mathematical Engine (RS-Ratio & RS-Momentum)
         rs = (close_data[ticker] / benchmark_series) * 100
         rs_ratio = 100 + ((rs - rs.rolling(10).mean()) / (rs.rolling(10).std() + 0.001)) * 10
         rs_momentum = 100 + ((rs_ratio - rs_ratio.rolling(10).mean()) / (rs_ratio.rolling(10).std() + 0.001)) * 10
@@ -81,9 +129,7 @@ with st.spinner("Fetching live Yahoo Finance index streams..."):
 if rrg_data:
     fig = go.Figure()
     
-    # Calculate perfect square bounds around the center (100, 100)
-    all_x = []
-    all_y = []
+    all_x, all_y = [], []
     for df in rrg_data.values():
         all_x.extend(df['RS_Ratio'].tolist())
         all_y.extend(df['RS_Momentum'].tolist())
@@ -93,24 +139,20 @@ if rrg_data:
         abs(max(all_y) - 100), abs(min(all_y) - 100)
     ) + 1.5
     
-    # Force a symmetric view grid window
     min_x, max_x = 100 - max_deviation, 100 + max_deviation
     min_y, max_y = 100 - max_deviation, 100 + max_deviation
 
-    # Clean geometric quadrant background blocks
-    fig.add_shape(type="rect", x0=100, y0=100, x1=max_x, y1=max_y, fillcolor="rgba(34, 197, 94, 0.05)", line_width=0)  # Leading
-    fig.add_shape(type="rect", x0=min_x, y0=100, x1=100, y1=max_y, fillcolor="rgba(59, 130, 246, 0.05)", line_width=0)  # Improving
-    fig.add_shape(type="rect", x0=min_x, y0=min_y, x1=100, y1=100, fillcolor="rgba(239, 68, 68, 0.05)", line_width=0)   # Lagging
-    fig.add_shape(type="rect", x0=100, y0=min_y, x1=max_x, y1=100, fillcolor="rgba(245, 158, 11, 0.05)", line_width=0)  # Weakening
+    fig.add_shape(type="rect", x0=100, y0=100, x1=max_x, y1=max_y, fillcolor="rgba(34, 197, 94, 0.05)", line_width=0)
+    fig.add_shape(type="rect", x0=min_x, y0=100, x1=100, y1=max_y, fillcolor="rgba(59, 130, 246, 0.05)", line_width=0)
+    fig.add_shape(type="rect", x0=min_x, y0=min_y, x1=100, y1=100, fillcolor="rgba(239, 68, 68, 0.05)", line_width=0)
+    fig.add_shape(type="rect", x0=100, y0=min_y, x1=max_x, y1=100, fillcolor="rgba(245, 158, 11, 0.05)", line_width=0)
 
-    # Plot lines and dots
     for sector_name, df in rrg_data.items():
         x_vals = df['RS_Ratio'].tolist()
         y_vals = df['RS_Momentum'].tolist()
         fig.add_trace(go.Scatter(x=x_vals, y=y_vals, mode='lines', name=sector_name, line=dict(width=2.5), hoverinfo='name'))
         fig.add_trace(go.Scatter(x=[x_vals[-1]], y=[y_vals[-1]], mode='markers+text', name=sector_name, text=[sector_name], textposition="top center", marker=dict(size=10, line=dict(width=1, color='black')), showlegend=False))
 
-    # General axes and grid line configuration layouts (Snytax Error Fixed Here)
     fig.update_layout(
         xaxis=dict(title="JDK RS-Ratio (Trend Strength)", range=[min_x, max_x], gridcolor='lightgray'),
         yaxis=dict(title="JDK RS-Momentum (Velocity)", range=[min_y, max_y], gridcolor='lightgray'),
@@ -127,11 +169,10 @@ if rrg_data:
 
     st.plotly_chart(fig, use_container_width=True)
 
-    # 5. DYNAMIC INTERPRETATION & ENGINE SECTION
+    # 5. DYNAMIC INTERPRETATION SECTION
     st.write("---")
-    st.header("📋 Real-Time Sector Intelligence & Interpretation Matrix")
+    st.header("📋 Real-Time Sector Intelligence Matrix")
     
-    # Sort sectors dynamically into lists based on last calculated point
     quadrants = {"Leading": [], "Improving": [], "Weakening": [], "Lagging": []}
     
     for sector_name, df in rrg_data.items():
@@ -147,44 +188,59 @@ if rrg_data:
         else:
             quadrants["Lagging"].append(sector_name)
 
-    # Display clean columns underneath the chart
     col1, col2, col3, col4 = st.columns(4)
-    
     with col1:
         st.success("🟢 LEADING")
-        if quadrants["Leading"]:
-            for s in quadrants["Leading"]:
-                st.markdown(f"**• {s}**")
-            st.caption("🔥 *Action:* Institutional trend leaders. Focus on buying alpha stock pullbacks here.")
-        else:
-            st.write("*No sectors currently*")
-            
+        for s in quadrants["Leading"]: st.markdown(f"**• {s}**")
     with col2:
         st.info("🔵 IMPROVING")
-        if quadrants["Improving"]:
-            for s in quadrants["Improving"]:
-                st.markdown(f"**• {s}**")
-            st.caption("🚀 *Action:* High-velocity recovery plays. Watch for early structural breakouts.")
-        else:
-            st.write("*No sectors currently*")
-            
+        for s in quadrants["Improving"]: st.markdown(f"**• {s}**")
     with col3:
         st.warning("🟡 WEAKENING")
-        if quadrants["Weakening"]:
-            for s in quadrants["Weakening"]:
-                st.markdown(f"**• {s}**")
-            st.caption("⚠️ *Action:* Structural trend is up but losing short-term velocity. Tighten stoplosses.")
-        else:
-            st.write("*No sectors currently*")
-            
+        for s in quadrants["Weakening"]: st.markdown(f"**• {s}**")
     with col4:
         st.error("🔴 LAGGING")
-        if quadrants["Lagging"]:
-            for s in quadrants["Lagging"]:
-                st.markdown(f"**• {s}**")
-            st.caption("🛑 *Action:* Underperforming sectors. Avoid buying or search for short setups here.")
-        else:
-            st.write("*No sectors currently*")
+        for s in quadrants["Lagging"]: st.markdown(f"**• {s}**")
+
+    # 6. ACTIONABLE ALPHA WATCHLIST GENERATOR (NEW)
+    st.write("---")
+    st.header("🎯 Alpha Momentum Watchlist (Outperforming Stock Picks)")
+    st.markdown("These stocks belong to the sectors currently sitting inside the **Leading** and **Improving** quadrants, offering the highest mathematical probability of alpha generation.")
+
+    target_sectors = quadrants["Leading"] + quadrants["Improving"]
+
+    if target_sectors:
+        # Filter stock choices across cap definitions
+        large_caps, mid_caps, small_caps = [], [], []
+        
+        for sector in target_sectors:
+            if sector in STOCK_MAP:
+                large_caps.extend([f"{stock.split('.')[0]} ({sector})" for stock in STOCK_MAP[sector]["Large-Cap"]])
+                mid_caps.extend([f"{stock.split('.')[0]} ({sector})" for stock in STOCK_MAP[sector]["Mid-Cap"]])
+                small_caps.extend([f"{stock.split('.')[0]} ({sector})" for stock in STOCK_MAP[sector]["Small-Cap"]])
+
+        # Render Cap Columns dynamically
+        w_col1, w_col2, w_col3 = st.columns(3)
+        
+        with w_col1:
+            st.markdown("### 🏢 Large-Cap Bluechips")
+            st.caption("Low volatility, stable institutional ownership. Perfect for safer equity deployment.")
+            for stock in large_caps[:6]:  # Limits to top 6 to keep UI clean
+                st.info(f"📈 **{stock}**")
+                
+        with w_col2:
+            st.markdown("### 🚀 Mid-Cap Aggressive")
+            st.caption("Balanced growth potential. Higher alpha vectors with moderate volatility profiles.")
+            for stock in mid_caps[:6]:
+                st.info(f"⚡ **{stock}**")
+                
+        with w_col3:
+            st.markdown("### 💎 Small-Cap Alpha Targets")
+            st.caption("High risk, high reward structures. Explosive breakout candidates on micro levels.")
+            for stock in small_caps[:6]:
+                st.info(f"🔥 **{stock}**")
+    else:
+        st.info("No sectors are currently inside Leading or Improving phases. Cash preservation or short strategies are recommended.")
 
 else:
     st.error("No pricing streams returned for this universe block from Yahoo Finance servers right now.")
