@@ -110,7 +110,7 @@ if rrg_data:
         fig.add_trace(go.Scatter(x=x_vals, y=y_vals, mode='lines', name=sector_name, line=dict(width=2.5), hoverinfo='name'))
         fig.add_trace(go.Scatter(x=[x_vals[-1]], y=[y_vals[-1]], mode='markers+text', name=sector_name, text=[sector_name], textposition="top center", marker=dict(size=10, line=dict(width=1, color='black')), showlegend=False))
 
-    # Grid line configurations layouts
+    # General axes and grid line configuration layouts (Snytax Error Fixed Here)
     fig.update_layout(
         xaxis=dict(title="JDK RS-Ratio (Trend Strength)", range=[min_x, max_x], gridcolor='lightgray'),
         yaxis=dict(title="JDK RS-Momentum (Velocity)", range=[min_y, max_y], gridcolor='lightgray'),
@@ -119,4 +119,72 @@ if rrg_data:
             dict(x=100 + max_deviation/2, y=100 + max_deviation/2, text="<b>LEADING (Strong Momentum)</b>", showarrow=False, font=dict(color="green", size=14)),
             dict(x=100 - max_deviation/2, y=100 + max_deviation/2, text="<b>IMPROVING (Recovering)</b>", showarrow=False, font=dict(color="blue", size=14)),
             dict(x=100 - max_deviation/2, y=100 - max_deviation/2, text="<b>LAGGING (Weak / Avoid)</b>", showarrow=False, font=dict(color="red", size=14)),
-            dict(x=100 + max_deviation/
+            dict(x=100 + max_deviation/2, y=100 - max_deviation/2, text="<b>WEAKENING (Cooling Down)</b>", showarrow=False, font=dict(color="orange", size=14))
+        ]
+    )
+    fig.add_hline(y=100, line_dash="dash", line_color="gray")
+    fig.add_vline(x=100, line_dash="dash", line_color="gray")
+
+    st.plotly_chart(fig, use_container_width=True)
+
+    # 5. DYNAMIC INTERPRETATION & ENGINE SECTION
+    st.write("---")
+    st.header("📋 Real-Time Sector Intelligence & Interpretation Matrix")
+    
+    # Sort sectors dynamically into lists based on last calculated point
+    quadrants = {"Leading": [], "Improving": [], "Weakening": [], "Lagging": []}
+    
+    for sector_name, df in rrg_data.items():
+        latest_ratio = df['RS_Ratio'].iloc[-1]
+        latest_momo = df['RS_Momentum'].iloc[-1]
+        
+        if latest_ratio >= 100 and latest_momo >= 100:
+            quadrants["Leading"].append(sector_name)
+        elif latest_ratio < 100 and latest_momo >= 100:
+            quadrants["Improving"].append(sector_name)
+        elif latest_ratio >= 100 and latest_momo < 100:
+            quadrants["Weakening"].append(sector_name)
+        else:
+            quadrants["Lagging"].append(sector_name)
+
+    # Display clean columns underneath the chart
+    col1, col2, col3, col4 = st.columns(4)
+    
+    with col1:
+        st.success("🟢 LEADING")
+        if quadrants["Leading"]:
+            for s in quadrants["Leading"]:
+                st.markdown(f"**• {s}**")
+            st.caption("🔥 *Action:* Institutional trend leaders. Focus on buying alpha stock pullbacks here.")
+        else:
+            st.write("*No sectors currently*")
+            
+    with col2:
+        st.info("🔵 IMPROVING")
+        if quadrants["Improving"]:
+            for s in quadrants["Improving"]:
+                st.markdown(f"**• {s}**")
+            st.caption("🚀 *Action:* High-velocity recovery plays. Watch for early structural breakouts.")
+        else:
+            st.write("*No sectors currently*")
+            
+    with col3:
+        st.warning("🟡 WEAKENING")
+        if quadrants["Weakening"]:
+            for s in quadrants["Weakening"]:
+                st.markdown(f"**• {s}**")
+            st.caption("⚠️ *Action:* Structural trend is up but losing short-term velocity. Tighten stoplosses.")
+        else:
+            st.write("*No sectors currently*")
+            
+    with col4:
+        st.error("🔴 LAGGING")
+        if quadrants["Lagging"]:
+            for s in quadrants["Lagging"]:
+                st.markdown(f"**• {s}**")
+            st.caption("🛑 *Action:* Underperforming sectors. Avoid buying or search for short setups here.")
+        else:
+            st.write("*No sectors currently*")
+
+else:
+    st.error("No pricing streams returned for this universe block from Yahoo Finance servers right now.")
