@@ -80,7 +80,7 @@ STOCK_MAP = {
         "Mid-Cap": ["OBEROIRLTY.NS", "PRESTIGE.NS", "PHOENIXLTD.NS"],
         "Small-Cap": ["SOBHA.NS", "BRIGADE.NS", "SUNTECK.NS"]
     },
-    "Nifty Energy": {
+    "Nifty Union / Energy": {
         "Large-Cap": ["RELIANCE.NS", "NTPC.NS", "POWERGRID.NS", "ONGC.NS"],
         "Mid-Cap": ["BPCL.NS", "IOC.NS", "GAIL.NS", "TATAPOWER.NS"],
         "Small-Cap": ["SJVN.NS", "IREDA.NS", "NHPC.NS"]
@@ -202,45 +202,61 @@ if rrg_data:
         st.error("🔴 LAGGING")
         for s in quadrants["Lagging"]: st.markdown(f"**• {s}**")
 
-    # 6. ACTIONABLE ALPHA WATCHLIST GENERATOR (NEW)
+    # 6. STRATIFIED ACTIONABLE STOCK LOOKUP GRID
     st.write("---")
-    st.header("🎯 Alpha Momentum Watchlist (Outperforming Stock Picks)")
-    st.markdown("These stocks belong to the sectors currently sitting inside the **Leading** and **Improving** quadrants, offering the highest mathematical probability of alpha generation.")
+    st.header("🎯 Alpha Momentum Watchlist (Target Swing Opportunities)")
+    st.markdown("This matrix populates stock tickers matching your active **Leading** and **Improving** sectors, categorized by risk and market cap size.")
 
-    target_sectors = quadrants["Leading"] + quadrants["Improving"]
-
-    if target_sectors:
-        # Filter stock choices across cap definitions
-        large_caps, mid_caps, small_caps = [], [], []
-        
-        for sector in target_sectors:
+    # Helper function to generate clean markdown columns for a list of sectors
+    def render_watchlist_column(sectors, header_title, accent_color):
+        st.markdown(f"### {header_title}")
+        if not sectors:
+            st.write("*No active sectors in this phase.*")
+            return
+            
+        l_caps, m_caps, s_caps = [], [], []
+        for sector in sectors:
             if sector in STOCK_MAP:
-                large_caps.extend([f"{stock.split('.')[0]} ({sector})" for stock in STOCK_MAP[sector]["Large-Cap"]])
-                mid_caps.extend([f"{stock.split('.')[0]} ({sector})" for stock in STOCK_MAP[sector]["Mid-Cap"]])
-                small_caps.extend([f"{stock.split('.')[0]} ({sector})" for stock in STOCK_MAP[sector]["Small-Cap"]])
-
-        # Render Cap Columns dynamically
-        w_col1, w_col2, w_col3 = st.columns(3)
+                l_caps.extend([f"{stock.split('.')[0]} ({sector.replace('Nifty ', '')})" for stock in STOCK_MAP[sector]["Large-Cap"]])
+                m_caps.extend([f"{stock.split('.')[0]} ({sector.replace('Nifty ', '')})" for stock in STOCK_MAP[sector]["Mid-Cap"]])
+                s_caps.extend([f"{stock.split('.')[0]} ({sector.replace('Nifty ', '')})" for stock in STOCK_MAP[sector]["Small-Cap"]])
         
-        with w_col1:
-            st.markdown("### 🏢 Large-Cap Bluechips")
-            st.caption("Low volatility, stable institutional ownership. Perfect for safer equity deployment.")
-            for stock in large_caps[:6]:  # Limits to top 6 to keep UI clean
-                st.info(f"📈 **{stock}**")
-                
-        with w_col2:
-            st.markdown("### 🚀 Mid-Cap Aggressive")
-            st.caption("Balanced growth potential. Higher alpha vectors with moderate volatility profiles.")
-            for stock in mid_caps[:6]:
-                st.info(f"⚡ **{stock}**")
-                
-        with w_col3:
-            st.markdown("### 💎 Small-Cap Alpha Targets")
-            st.caption("High risk, high reward structures. Explosive breakout candidates on micro levels.")
-            for stock in small_caps[:6]:
-                st.info(f"🔥 **{stock}**")
-    else:
-        st.info("No sectors are currently inside Leading or Improving phases. Cash preservation or short strategies are recommended.")
+        # Display the formatted data blocks
+        st.markdown("**🏢 Large-Cap Bluechips**")
+        if l_caps:
+            for s in l_caps[:4]: st.markdown(f"`{s}`")
+        else: st.write("-")
+            
+        st.markdown("**🚀 Mid-Cap Momentum**")
+        if m_caps:
+            for s in m_caps[:4]: st.markdown(f"`{s}`")
+        else: st.write("-")
+            
+        st.markdown("**💎 Small-Cap Breakouts**")
+        if s_caps:
+            for s in s_caps[:4]: st.markdown(f"`{s}`")
+        else: st.write("-")
+
+    # Render target tactical blocks side by side
+    watch_col1, watch_col2 = st.columns(2)
+    
+    with watch_col1:
+        # High Velocity / Momentum plays (Improving Quadrant)
+        render_watchlist_column(
+            quadrants["Improving"], 
+            "🔵 Improving Sector Picks (Swing Trading Alerts)", 
+            "blue"
+        )
+        st.caption("💡 *Swing Logic:* These stocks possess rising velocity. Look for trend-reversal entries or breakout structures on daily charts.")
+        
+    with watch_col2:
+        # Long term structural leaders (Leading Quadrant)
+        render_watchlist_column(
+            quadrants["Leading"], 
+            "🟢 Leading Sector Picks (Position & Trend)", 
+            "green"
+        )
+        st.caption("💡 *Trend Logic:* Strong structural alpha. Best utilized for buying high-conviction pullbacks to key moving averages.")
 
 else:
     st.error("No pricing streams returned for this universe block from Yahoo Finance servers right now.")
