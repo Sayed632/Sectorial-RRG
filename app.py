@@ -80,21 +80,61 @@ STOCK_MAP = {
         "Mid-Cap": ["OBEROIRLTY.NS", "PRESTIGE.NS", "PHOENIXLTD.NS"],
         "Small-Cap": ["SOBHA.NS", "BRIGADE.NS", "SUNTECK.NS"]
     },
-    "Nifty Union / Energy": {
+    "Nifty Energy": {
         "Large-Cap": ["RELIANCE.NS", "NTPC.NS", "POWERGRID.NS", "ONGC.NS"],
         "Mid-Cap": ["BPCL.NS", "IOC.NS", "GAIL.NS", "TATAPOWER.NS"],
         "Small-Cap": ["SJVN.NS", "IREDA.NS", "NHPC.NS"]
     }
 }
 
-# 2. STREAMLIT USER INTERFACE CONTROL PANEL
+# Compile a flat master list of all available tickers for the search box filter
+ALL_AVAILABLE_STOCKS = sorted(list(set([
+    stock for sector in STOCK_MAP.values() for cap_group in sector.values() for stock in cap_group
+])))
+
+# 2. SIDEBAR - INDIVIDUAL STOCK TREND CHARTER (NEW MODULE)
+st.sidebar.header("🔍 Individual Stock Trend Look-up")
+st.sidebar.markdown("Pick a stock from your watchlists to verify its daily chart breakout profile before trading.")
+selected_stock_ticker = st.sidebar.selectbox("Select Ticker Target:", ALL_AVAILABLE_STOCKS)
+lookback_days = st.sidebar.slider("Historical Lookback Window (Days):", min_value=30, max_value=180, value=90)
+
+@st.cache_data(ttl=1800)
+def fetch_stock_trend(ticker, days):
+    end_date = datetime.date.today()
+    start_date = end_date - datetime.timedelta(days=days)
+    data = yf.download(ticker, start=start_date, end=end_date, interval="1d", auto_adjust=True)
+    return data
+
+if selected_stock_ticker:
+    stock_df = fetch_stock_trend(selected_stock_ticker, lookback_days)
+    if not stock_df.empty:
+        st.sidebar.subheader(f"📈 {selected_stock_ticker.replace('.NS', '')} Daily Trend")
+        
+        # Plotly chart definition inside the sidebar container
+        trend_fig = go.Figure()
+        trend_fig.add_trace(go.Scatter(
+            x=stock_df.index, y=stock_df['Close'].iloc[:, 0] if isinstance(stock_df['Close'], pd.DataFrame) else stock_df['Close'],
+            mode='lines', name='Close Price', line=dict(color='#2563eb', width=2)
+        ))
+        trend_fig.update_layout(
+            margin=dict(l=10, r=10, t=10, b=10),
+            height=280, plot_bgcolor='white',
+            xaxis=dict(showgrid=True, gridcolor='#f1f5f9'),
+            yaxis=dict(showgrid=True, gridcolor='#f1f5f9')
+        )
+        st.sidebar.plotly_chart(trend_fig, use_container_width=True)
+    else:
+        st.sidebar.warning("Failed to download pricing data for this stock stream.")
+
+
+# 3. MAIN DASHBOARD DISPLAY PANEL
 st.title("📊 Relative Rotation Graph (RRG) Dashboard")
 st.markdown("Track real-time sector velocity and institutional rotation trends across NSE indices.")
 
 selected_universe_name = st.selectbox("Select Target Market Universe:", list(UNIVERSES.keys()))
 universe_config = UNIVERSES[selected_universe_name]
 
-# 3. LIVE MARKET DATA PROCESSING
+# 4. LIVE RRG MARKET DATA PROCESSING
 @st.cache_data(ttl=3600)
 def load_and_calculate_rrg(config):
     benchmark_ticker = config["benchmark"]
@@ -125,7 +165,7 @@ def load_and_calculate_rrg(config):
 with st.spinner("Fetching live Yahoo Finance index streams..."):
     rrg_data = load_and_calculate_rrg(universe_config)
 
-# 4. PLOTLY GRAPH VISUALIZATION SETUP
+# 5. MAIN RRG PLOTLY CHART DISPLAY
 if rrg_data:
     fig = go.Figure()
     
@@ -169,7 +209,7 @@ if rrg_data:
 
     st.plotly_chart(fig, use_container_width=True)
 
-    # 5. DYNAMIC INTERPRETATION SECTION
+    # 6. DYNAMIC INTERPRETATION SECTION
     st.write("---")
     st.header("📋 Real-Time Sector Intelligence Matrix")
     
@@ -202,13 +242,12 @@ if rrg_data:
         st.error("🔴 LAGGING")
         for s in quadrants["Lagging"]: st.markdown(f"**• {s}**")
 
-    # 6. STRATIFIED ACTIONABLE STOCK LOOKUP GRID
+    # 7. STRATIFIED ACTIONABLE STOCK LOOKUP GRID
     st.write("---")
     st.header("🎯 Alpha Momentum Watchlist (Target Swing Opportunities)")
     st.markdown("This matrix populates stock tickers matching your active **Leading** and **Improving** sectors, categorized by risk and market cap size.")
 
-    # Helper function to generate clean markdown columns for a list of sectors
-    def render_watchlist_column(sectors, header_title, accent_color):
+    def render_watchlist_column(sectors, header_title):
         st.markdown(f"### {header_title}")
         if not sectors:
             st.write("*No active sectors in this phase.*")
@@ -221,7 +260,6 @@ if rrg_data:
                 m_caps.extend([f"{stock.split('.')[0]} ({sector.replace('Nifty ', '')})" for stock in STOCK_MAP[sector]["Mid-Cap"]])
                 s_caps.extend([f"{stock.split('.')[0]} ({sector.replace('Nifty ', '')})" for stock in STOCK_MAP[sector]["Small-Cap"]])
         
-        # Display the formatted data blocks
         st.markdown("**🏢 Large-Cap Bluechips**")
         if l_caps:
             for s in l_caps[:4]: st.markdown(f"`{s}`")
@@ -237,25 +275,14 @@ if rrg_data:
             for s in s_caps[:4]: st.markdown(f"`{s}`")
         else: st.write("-")
 
-    # Render target tactical blocks side by side
     watch_col1, watch_col2 = st.columns(2)
     
     with watch_col1:
-        # High Velocity / Momentum plays (Improving Quadrant)
-        render_watchlist_column(
-            quadrants["Improving"], 
-            "🔵 Improving Sector Picks (Swing Trading Alerts)", 
-            "blue"
-        )
+        render_watchlist_column(quadrants["Improving"], "🔵 Improving Sector Picks (Swing Trading Alerts)")
         st.caption("💡 *Swing Logic:* These stocks possess rising velocity. Look for trend-reversal entries or breakout structures on daily charts.")
         
     with watch_col2:
-        # Long term structural leaders (Leading Quadrant)
-        render_watchlist_column(
-            quadrants["Leading"], 
-            "🟢 Leading Sector Picks (Position & Trend)", 
-            "green"
-        )
+        render_watchlist_column(quadrants["Leading"], "🟢 Leading Sector Picks (Position & Trend)")
         st.caption("💡 *Trend Logic:* Strong structural alpha. Best utilized for buying high-conviction pullbacks to key moving averages.")
 
 else:
