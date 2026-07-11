@@ -83,6 +83,28 @@ METRIC_LABELS = {
 }
 
 
+def _red_yellow_green(value, vmin=0, vmax=100):
+    """
+    Manual red->yellow->green background color for a 0-100 value.
+    Replaces pandas Styler's background_gradient() so this page doesn't
+    need matplotlib as a dependency (which caused an ImportError on
+    Streamlit Cloud's default environment).
+    """
+    try:
+        v = float(value)
+    except (TypeError, ValueError):
+        return ""
+    v = max(vmin, min(vmax, v))
+    t = (v - vmin) / (vmax - vmin)  # 0..1
+    if t < 0.5:
+        # red (t=0) -> yellow (t=0.5)
+        r, g, b = 220, int(220 * (t / 0.5)), 80
+    else:
+        # yellow (t=0.5) -> green (t=1)
+        r, g, b = int(220 * (1 - (t - 0.5) / 0.5)), 200, 80
+    return f"background-color: rgb({r},{g},{b})"
+
+
 @st.cache_data(ttl=900, show_spinner=False)
 def fetch_stock_data(ticker: str) -> dict | None:
     """Pull 6mo daily OHLCV + basic info for one ticker; return computed metrics."""
@@ -184,11 +206,9 @@ def render():
         return
 
     display_df = breadth_df.rename(columns=METRIC_LABELS)
+    gradient_cols = [c for c in display_df.columns if c not in ("Sector", "No. of Stocks")]
     st.dataframe(
-        display_df.style.background_gradient(
-            subset=[c for c in display_df.columns if c not in ("Sector", "No. of Stocks")],
-            cmap="RdYlGn", vmin=0, vmax=100,
-        ),
+        display_df.style.map(_red_yellow_green, subset=gradient_cols),
         use_container_width=True,
     )
 
