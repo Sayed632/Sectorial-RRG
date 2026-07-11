@@ -352,3 +352,21 @@ if rrg_data:
 
 else:
     st.error("No pricing streams returned for this universe block from Yahoo Finance servers right now.")
+
+
+# 8. SECTOR BREADTH TABLE + CLICKABLE TREEMAP (NEW SECTION)
+# Uses the fuller 493-stock/18-sector nifty500 mapping (sector_universe_generated.py)
+# rather than the curated STOCK_MAP above, since breadth stats are more meaningful
+# over a broader sample than a handful of names per sector.
+st.write("---")
+st.header("📊 Sector Breadth + Stock Treemap")
+st.caption(
+    "Uses the fuller Nifty 500 sector mapping (493 stocks / 18 sectors) rather than "
+    "the curated watchlist above, for more representative breadth stats."
+)
+
+import sector_breadth_treemap
+from sector_universe_generated import SECTOR_UNIVERSE as FULL_SECTOR_UNIVERSE
+
+sector_breadth_treemap.SECTOR_UNIVERSE = FULL_SECTOR_UNIVERSE
+sector_breadth_treemap.render()
